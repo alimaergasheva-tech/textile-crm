@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.env
+*.log
+_to_delete
+docs
+apps/api/data

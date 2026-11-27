@@ -1,0 +1,24 @@
+# DOMAIN — основной домен, например crm.example.uz. Нужны DNS-записи A для app., m. и api. на IP сервера.
+app.{$DOMAIN} {
+	root * /srv/web
+	encode gzip
+	try_files {path} /index.html
+	file_server
+}
+
+# Mini App: статика и /api → API (без префикса), поэтому приложению не нужны CORS и отдельный адрес
+m.{$DOMAIN} {
+	encode gzip
+	handle_path /api/* {
+		reverse_proxy api:3000
+	}
+	handle {
+		root * /srv/mini
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+api.{$DOMAIN} {
+	reverse_proxy api:3000
+}

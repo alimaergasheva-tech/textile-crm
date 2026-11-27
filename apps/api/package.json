@@ -1,0 +1,44 @@
+{
+  "name": "@textile/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/seed.ts",
+    "db:seed-demo": "tsx src/seed-demo.ts",
+    "db:seed-stock": "tsx src/seed-stock.ts",
+    "db:seed-load": "tsx src/seed-load.ts",
+    "db:seed-platform": "tsx src/seed-platform.ts",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0",
+    "@aws-sdk/s3-request-presigner": "^3.700.0",
+    "@nestjs/common": "^10.4.0",
+    "@nestjs/core": "^10.4.0",
+    "@nestjs/platform-express": "^10.4.0",
+    "argon2": "^0.41.0",
+    "cookie-parser": "^1.4.7",
+    "dejavu-fonts-ttf": "^2.37.3",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.15.0",
+    "pg": "^8.13.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.13.4",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

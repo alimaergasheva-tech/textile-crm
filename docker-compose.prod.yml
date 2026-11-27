@@ -1,0 +1,54 @@
+# Продакшн на одном сервере: база, API, статика с HTTPS. Запуск и порядок действий — docs/DEPLOY.md
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-crm}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?задайте APP_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crm}"]
+      interval: 5s
+      retries: 20
+  api:
+    build: { context: ., target: api }
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-crm}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-crm}
+      APP_DATABASE_URL: postgres://crm_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-crm}
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET (длинная случайная строка)}
+      WEB_ORIGIN: https://app.${DOMAIN:?задайте DOMAIN}
+      MINIAPP_ORIGIN: https://m.${DOMAIN}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      PLATFORM_ADMIN_EMAIL: ${PLATFORM_ADMIN_EMAIL:-}
+      PLATFORM_ADMIN_PASSWORD: ${PLATFORM_ADMIN_PASSWORD:-}
+      FILES_DIR: /data/files
+    volumes:
+      - files:/data/files
+  web:
+    build:
+      context: .
+      target: static
+      args:
+        VITE_API_URL: https://api.${DOMAIN}
+    restart: unless-stopped
+    depends_on: [api]
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  pgdata:
+  files:
+  caddy_data:
+  caddy_config:

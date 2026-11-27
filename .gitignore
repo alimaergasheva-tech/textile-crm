@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+_to_delete
+apps/api/data/
+
+# результаты запусков скриптов и локальные данные (могут содержать токены и тестовые данные)
+docs/*-result.txt
+docs/test-full.txt
+docs/pilot-report-*.txt
+docs/*.log
+.env.*
+!.env.example
+!.env.production.example

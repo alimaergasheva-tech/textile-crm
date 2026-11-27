@@ -1,0 +1,14 @@
+{
+  "name": "textile-crm",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "db:migrate": "pnpm --filter @textile/api db:migrate",
+    "test:rls": "pnpm --filter @textile/api test",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
