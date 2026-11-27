@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, Res, StreamableFile } from "@nestjs/common";
 import { z } from "zod";
 import { DbService } from "../db/db.service.ts";
 import { AuditService } from "../audit/audit.service.ts";
@@ -6,6 +6,7 @@ import { RequirePermission } from "../rbac/rbac.ts";
 import { R } from "../crm/common.ts";
 import { calcRequirement } from "./bom.ts";
 import { ean13 } from "./ean.ts";
+import { buildLabelsPdf } from "./labels.ts";
 
 const uuid = z.string().uuid();
 const Model = z.object({
@@ -108,6 +109,29 @@ export class CatalogController {
       `SELECT m.id,m.code,m.name,m.collection,m.season,m.category,m.is_active,
               (SELECT count(*)::int FROM variants v WHERE v.model_id=m.id) AS variants_count
          FROM models m WHERE $1='' OR m.name ILIKE '%'||$1||'%' OR m.code ILIKE '%'||$1||'%' ORDER BY m.code LIMIT 500`, [q])).rows);
+  }
+
+  /** Этикетки со штрихкодом EAN-13. ?format=a4|thermal &copies=1..100 &variantIds=id1,id2 (иначе все варианты модели). */
+  @Get("models/:id/labels") @RequirePermission("models.view")
+  async labels(@Req() req: R, @Param("id", ParseUUIDPipe) id: string, @Query("format") format: string | undefined,
+    @Query("copies") copiesRaw: string | undefined, @Query("variantIds") variantIds: string | undefined, @Res({ passthrough: true }) res: any) {
+    const copies = Math.min(100, Math.max(1, Math.floor(Number(copiesRaw ?? 1)) || 1));
+    const ids = variantIds ? variantIds.split(",").filter(Boolean) : [];
+    if (!ids.every((x) => uuid.safeParse(x).success)) throw new BadRequestException("Неверный список вариантов");
+    const items = await this.db.tx(req.user.tenantId, async (c) => {
+      const m = (await c.query("SELECT code,name FROM models WHERE id=$1", [id])).rows[0];
+      if (!m) throw new NotFoundException();
+      const rows = (await c.query(
+        `SELECT v.sku,v.barcode,col.name_ru AS color,s.label AS size
+           FROM variants v JOIN sizes s ON s.id=v.size_id JOIN colors col ON col.id=v.color_id
+          WHERE v.model_id=$1 AND v.is_active AND ($2::uuid[] IS NULL OR v.id = ANY($2::uuid[])) ORDER BY col.name_ru,s.sort`,
+        [id, ids.length ? ids : null])).rows;
+      return rows.map((r) => ({ ...r, model_code: m.code, model_name: m.name }));
+    });
+    if (items.length * copies > 2000) throw new BadRequestException("Слишком много этикеток за раз (максимум 2000)");
+    const buf = await buildLabelsPdf(items, format === "thermal" ? "thermal" : "a4", copies);
+    res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="labels-${id}.pdf"` });
+    return new StreamableFile(buf);
   }
 
   @Get("models/:id") @RequirePermission("models.view")

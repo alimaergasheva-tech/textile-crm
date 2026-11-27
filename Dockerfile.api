@@ -1,0 +1,17 @@
+# Только API — для Railway и подобных хостингов (в основном Dockerfile последней стадией идёт статика с Caddy).
+FROM node:22-slim AS deps
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
+COPY apps/miniapp/package.json apps/miniapp/
+COPY packages/shared/package.json packages/shared/
+COPY packages/ui/package.json packages/ui/
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS api
+COPY . .
+ENV NODE_ENV=production FILES_DIR=/data/files
+# Порядок: роль crm_app → миграции → администратор платформы (если заданы e-mail и пароль) → сервер. PORT задаёт хостинг.
+CMD ["sh", "-c", "pnpm --filter @textile/api db:init-roles && pnpm --filter @textile/api db:migrate && { [ -z \"$PLATFORM_ADMIN_EMAIL\" ] || [ -z \"$PLATFORM_ADMIN_PASSWORD\" ] || pnpm --filter @textile/api db:seed-platform; } && pnpm --filter @textile/api start"]

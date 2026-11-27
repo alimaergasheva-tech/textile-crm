@@ -4,7 +4,13 @@ const need = (k: string): string => {
   return v;
 };
 export const config = {
-  appDatabaseUrl: () => need("APP_DATABASE_URL"),
+  /** APP_DATABASE_URL, а если не задан — адрес DATABASE_URL с пользователем crm_app и паролем APP_DB_PASSWORD (Railway). */
+  appDatabaseUrl: (): string => {
+    if (process.env.APP_DATABASE_URL) return process.env.APP_DATABASE_URL;
+    const admin = process.env.DATABASE_URL, pw = process.env.APP_DB_PASSWORD;
+    if (admin && pw) { const u = new URL(admin); u.username = "crm_app"; u.password = pw; return u.toString(); }
+    return need("APP_DATABASE_URL");
+  },
   jwtSecret: () => need("JWT_SECRET"),
   platformDatabaseUrl: () => process.env.PLATFORM_DATABASE_URL ?? need("DATABASE_URL"),
   clientSecret: () => `${need("JWT_SECRET")}:client`,

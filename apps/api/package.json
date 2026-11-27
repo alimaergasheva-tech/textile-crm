@@ -7,6 +7,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:init-roles": "tsx src/db/init-roles.ts",
     "db:seed": "tsx src/seed.ts",
     "db:seed-demo": "tsx src/seed-demo.ts",
     "db:seed-stock": "tsx src/seed-stock.ts",

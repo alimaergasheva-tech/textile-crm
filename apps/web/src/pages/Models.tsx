@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api";
+import { api, openPdf } from "../api";
 import { useMe, useUi } from "../state";
 import { Color, Grid } from "./CatalogSettings";
 
@@ -61,6 +61,7 @@ export function ModelPage() {
   const { can } = useMe();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"variants" | "bom" | "route" | "prices">("variants");
+  const [copies, setCopies] = useState(1);
   const d = useQuery({ queryKey: ["model", id], queryFn: () => api<Detail>(`/models/${id}`) });
   const colors = useQuery({ queryKey: ["colors"], queryFn: () => api<Color[]>("/colors") });
   const grids = useQuery({ queryKey: ["grids"], queryFn: () => api<Grid[]>("/size-grids") });
@@ -112,6 +113,14 @@ export function ModelPage() {
       </div>
 
       {tab === "variants" && (<>
+        {variants.length > 0 && (
+          <div className="inline">
+            <b>{t("labels")}</b>{" "}
+            <label>{t("copies")} <input type="number" min={1} max={100} value={copies} onChange={(e) => setCopies(Math.max(1, Math.min(100, Number(e.target.value) || 1)))} style={{ width: 60 }} /></label>{" "}
+            <button onClick={() => openPdf(`/models/${id}/labels?format=a4&copies=${copies}`)}>{t("labelsA4")}</button>{" "}
+            <button onClick={() => openPdf(`/models/${id}/labels?format=thermal&copies=${copies}`)}>{t("labelsThermal")}</button>
+          </div>
+        )}
         <table>
           <thead><tr><th>{t("sku")}</th><th>{t("barcode")}</th><th>{t("size")}</th><th>{t("color")}</th></tr></thead>
           <tbody>{variants.map((v) => <tr key={v.id}><td className="mono">{v.sku}</td><td className="mono">{v.barcode}</td><td>{v.size}</td><td>{v.color}</td></tr>)}</tbody>
