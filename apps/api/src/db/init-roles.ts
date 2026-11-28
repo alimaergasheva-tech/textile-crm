@@ -14,7 +14,9 @@ const client = new pg.Client({ connectionString: url });
 await client.connect();
 try {
   const exists = (await client.query("SELECT 1 FROM pg_roles WHERE rolname='crm_app'")).rowCount;
-  await client.query(`${exists ? "ALTER" : "CREATE"} ROLE crm_app LOGIN PASSWORD ${lit(password)} NOSUPERUSER NOBYPASSRLS`);
+  // Для существующей роли меняем только пароль: на управляемых базах (Neon) у владельца нет суперправ, и ALTER с NOSUPERUSER/NOBYPASSRLS отказывает.
+  if (exists) await client.query(`ALTER ROLE crm_app PASSWORD ${lit(password)}`);
+  else await client.query(`CREATE ROLE crm_app LOGIN PASSWORD ${lit(password)} NOSUPERUSER NOBYPASSRLS`);
   const db = (await client.query("SELECT current_database() AS d")).rows[0].d as string;
   await client.query(`GRANT CONNECT ON DATABASE "${db.replace(/"/g, '""')}" TO crm_app`);
   console.log(exists ? "Роль crm_app обновлена" : "Роль crm_app создана");
