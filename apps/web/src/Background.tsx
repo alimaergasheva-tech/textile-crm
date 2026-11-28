@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUi } from "./state";
 
 // Полноэкранный треугольник без буферов: вершины берутся из gl_VertexID.
@@ -52,8 +52,7 @@ function compile(gl: WebGL2RenderingContext, type: number, src: string) {
   return s;
 }
 
-/** Живой фон на WebGL2. Без WebGL2 включается CSS-запасной вариант (класс bg-fallback на <html>). */
-export function Background() {
+function ShaderBackground() {
   const ref = useRef<HTMLCanvasElement>(null);
   const { theme } = useUi();
   const target = useRef(theme === "dark" ? 1 : 0);
@@ -125,4 +124,20 @@ export function Background() {
   }, []);
 
   return <canvas ref={ref} className="bg" aria-hidden="true" />;
+}
+
+/**
+ * Фон приложения. Если в apps/web/public лежит файл bg.jpg, показывается он (с затемнением под тему),
+ * иначе остаётся живой WebGL-фон. Картинку проверяем один раз при запуске.
+ */
+export function Background() {
+  const [photo, setPhoto] = useState<boolean | null>(null);
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setPhoto(true);
+    img.onerror = () => setPhoto(false);
+    img.src = "/bg.jpg";
+  }, []);
+  if (photo === null) return null;
+  return photo ? <div className="bg bg-photo" aria-hidden="true" /> : <ShaderBackground />;
 }

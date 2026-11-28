@@ -18,19 +18,53 @@ export const DEFAULT_STAGES: [string, string][] = [
   ["Согласование цены и сроков", "open"], ["Выиграна", "won"], ["Проиграна", "lost"],
 ];
 
+/** Отделы новой фабрики (код, название). Совпадает с миграцией 016. */
+export const DEFAULT_DEPARTMENTS: [string, string][] = [
+  ["sales", "Продажи"], ["tech", "Технологи"], ["purchasing", "Закупки"], ["qc", "ОТК"],
+  ["production", "Производство"], ["ved", "ВЭД"], ["logistics", "Логистика"], ["management", "Дирекция"],
+];
+/** Видят свои задачи и задачи своих отделов. */
+const TASKS_OWN = ["tasks.view:own", "tasks.create:own", "tasks.edit:own"];
+const DEPT_VIEW = ["departments.view"];
+const XQ_MANAGE = ["exportquotes.view", "exportquotes.manage"];
+const XPUR_VIEW = ["exportpurchases.view"];
+const XPUR_MGR = ["exportpurchases.view", "exportpurchases.manage"];
+const XSMP_VIEW = ["exportsamples.view"];
+const XSMP_MGR = ["exportsamples.view", "exportsamples.manage"];
+const XINS_VIEW = ["exportinspections.view"];
+const XINS_MGR = ["exportinspections.view", "exportinspections.manage"];
+const XPRD_VIEW = ["exportproduction.view", "exportshipments.view"];
+const XPRD_PROD = ["exportproduction.view", "exportproduction.manage", "exportshipments.view"];
+const XPRD_LOG = ["exportproduction.view", "exportshipments.view", "exportshipments.manage"];
+const XVED_VIEW = ["exportved.view"];
+const XVED_MGR = ["exportved.view", "exportved.manage"];
+const XLOG_VIEW = ["exportlogistics.view"];
+const XLOG_MGR = ["exportlogistics.view", "exportlogistics.manage"];
+const XORD_VIEW = ["exportorders.view", "patterns.view"];
+const XORD_SALES = ["exportorders.view", "exportorders.create", "exportorders.edit", "patterns.view"];
+export const DEFAULT_ACCESSORIES: [string, string, string][] = [
+  ["CORD", "Шнур хлопок D=0,5 см", "м"], ["TIPS", "Пластиковые наконечники шнура", "шт"], ["ELASTIC25", "Резинка 25 мм", "м"],
+  ["TT-S", "Термотрансфер малый (рост 98–146)", "шт"], ["TT-L", "Термотрансфер большой (рост 152–182)", "шт"],
+  ["HANGTAG", "Картонник / хэнгтег", "шт"], ["POLY30", "Полибэг 30×30 см", "шт"], ["CARTON", "Гофрокороб", "шт"], ["OTHER", "Нитки и прочее", "комплект"],
+  ["ELASTIC35", "Резинка 35 мм", "м"], ["BOW", "Шнурок-бантик из кулирки D=0,5 см", "м"],
+];
+
 export const SYSTEM_ROLES: { code: string; name: string; perms: "all" | string[] }[] = [
   { code: "owner", name: "Владелец / директор", perms: "all" },
   { code: "admin", name: "Администратор системы", perms: "all" },
-  { code: "sales_head", name: "Руководитель отдела продаж", perms: ["users.view", "files.view", "files.create", ...CRM_ALL, ...CAT_VIEW, ...QUOTES, ...WH_VIEW, ...ORD_VIEW, "orders.create", "orders.approve", "feedback.view", "feedback.create", "feedback.manage"] },
-  { code: "sales_manager", name: "Менеджер по продажам", perms: ["files.view", "files.create", ...CRM_OWN, ...CAT_VIEW, ...QUOTES.map((q) => `${q}:own`), ...WH_VIEW, ...ORD_VIEW, "orders.create", "feedback.view", "feedback.create"] },
-  { code: "technologist", name: "Технолог / конструктор", perms: ["files.view", "files.create", ...CAT_TECH, "warehouse.view"] },
-  { code: "production_head", name: "Начальник производства", perms: ["users.view", "files.view", "files.create", "models.view", "materials.view", "warehouse.view", "warehouse.write", "orders.view", "shipments.view", "production.view", "production.manage", "production.report", "production.qc"] },
+  { code: "sales_head", name: "Руководитель отдела продаж", perms: ["users.view", "files.view", "files.create", ...CRM_ALL, ...CAT_VIEW, ...QUOTES, ...WH_VIEW, ...ORD_VIEW, "orders.create", "orders.approve", "feedback.view", "feedback.create", "feedback.manage", ...DEPT_VIEW, ...XORD_SALES, ...XQ_MANAGE, ...XPUR_MGR, ...XSMP_MGR, ...XINS_MGR, ...XPRD_LOG, ...XVED_MGR, ...XLOG_MGR] },
+  { code: "sales_manager", name: "Менеджер по продажам", perms: ["files.view", "files.create", ...CRM_OWN, ...CAT_VIEW, ...QUOTES.map((q) => `${q}:own`), ...WH_VIEW, ...ORD_VIEW, "orders.create", "feedback.view", "feedback.create", ...DEPT_VIEW, ...XORD_SALES, ...XQ_MANAGE, ...XPUR_VIEW, ...XSMP_MGR, ...XINS_VIEW, ...XPRD_VIEW] },
+  { code: "technologist", name: "Технолог / конструктор", perms: ["files.view", "files.create", ...CAT_TECH, "warehouse.view", ...TASKS_OWN, ...DEPT_VIEW, "exportorders.edit", "patterns.manage", ...XORD_VIEW, ...XPUR_VIEW, ...XSMP_MGR, ...XINS_VIEW, ...XPRD_VIEW] },
+  { code: "production_head", name: "Начальник производства", perms: ["users.view", "files.view", "files.create", "models.view", "materials.view", "warehouse.view", "warehouse.write", "orders.view", "shipments.view", "production.view", "production.manage", "production.report", "production.qc", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XPUR_VIEW, ...XSMP_MGR, ...XINS_MGR, ...XPRD_PROD, ...XLOG_VIEW] },
   { code: "foreman", name: "Бригадир / рабочий", perms: ["files.create"] },
   { code: "brigadier", name: "Бригадир", perms: ["production.view", "production.report"] },
-  { code: "qc", name: "Контролёр ОТК", perms: ["files.view", "files.create", "warehouse.view", "production.view", "production.report", "production.qc"] },
-  { code: "storekeeper", name: "Кладовщик", perms: ["files.view", "files.create", "models.view", "materials.view", "warehouse.view", "warehouse.write", "warehouse.inventory", "warehouse.manage", "production.view", "shipments.view", "shipments.create"] },
-  { code: "purchaser", name: "Закупщик", perms: ["files.view", "warehouse.view"] },
-  { code: "accountant", name: "Бухгалтер / финансист", perms: ["files.view", "warehouse.view"] },
+  { code: "qc", name: "Контролёр ОТК", perms: ["files.view", "files.create", "warehouse.view", "production.view", "production.report", "production.qc", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XPUR_VIEW, ...XSMP_VIEW, ...XINS_MGR, ...XPRD_VIEW] },
+  { code: "storekeeper", name: "Кладовщик", perms: ["files.view", "files.create", "models.view", "materials.view", "warehouse.view", "warehouse.write", "warehouse.inventory", "warehouse.manage", "production.view", "shipments.view", "shipments.create", ...TASKS_OWN, ...DEPT_VIEW] },
+  { code: "purchaser", name: "Закупщик", perms: ["files.view", "warehouse.view", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XPUR_MGR, ...XSMP_VIEW, ...XINS_VIEW, ...XPRD_VIEW] },
+  { code: "accountant", name: "Бухгалтер / финансист", perms: ["files.view", "warehouse.view", ...DEPT_VIEW, ...XORD_VIEW, "exportquotes.view", ...XPUR_VIEW, ...XSMP_VIEW, ...XINS_VIEW, ...XPRD_VIEW, ...XVED_VIEW, ...XLOG_VIEW] },
+  { code: "ved", name: "Специалист ВЭД", perms: ["files.view", "files.create", "orders.view", "shipments.view", "warehouse.view", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XSMP_VIEW, ...XINS_VIEW, ...XPRD_LOG, ...XVED_MGR, ...XLOG_VIEW] },
+  { code: "logistics", name: "Логист", perms: ["files.view", "files.create", "orders.view", "shipments.view", "warehouse.view", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XPUR_VIEW, ...XSMP_VIEW, ...XINS_VIEW, ...XPRD_LOG, ...XVED_MGR, ...XLOG_MGR] },
+  { code: "planner", name: "Планировщик", perms: ["files.view", "orders.view", "production.view", ...TASKS_OWN, ...DEPT_VIEW, ...XORD_VIEW, ...XPUR_VIEW, ...XSMP_VIEW, ...XINS_VIEW, ...XPRD_PROD, ...XLOG_VIEW] },
 ];
 
 export const DEFAULT_REFERENCES: Record<string, [string, string, string, string, string][]> = {
@@ -59,6 +93,10 @@ export async function provisionTenant(c: pg.ClientBase, slug: string, name: stri
         [tid, rid, code, flag === "own"]);
     }
   }
+  for (const [i, [code, dname]] of DEFAULT_DEPARTMENTS.entries())
+    await c.query("INSERT INTO departments (tenant_id,code,name,sort) VALUES ($1,$2,$3,$4)", [tid, code, dname, i + 1]);
+  for (const [code, aname, unit] of DEFAULT_ACCESSORIES)
+    await c.query("INSERT INTO export_accessories (tenant_id,code,name,unit) VALUES ($1,$2,$3,$4)", [tid, code, aname, unit]);
   for (const [i, [name, kind]] of DEFAULT_STAGES.entries())
     await c.query("INSERT INTO pipeline_stages (tenant_id,name,sort,kind) VALUES ($1,$2,$3,$4)", [tid, name, i + 1, kind]);
   for (const [name, kind] of [["Склад сырья", "raw"], ["Цех (незавершённое производство)", "wip"], ["Склад готовой продукции", "finished"]]) {

@@ -30,11 +30,25 @@ import { HealthController } from "./platform/health.controller.ts";
 import { ExportController } from "./export/export.controller.ts";
 import { ImportController } from "./export/import.controller.ts";
 import { FilesController } from "./files/files.controller.ts";
+import { DepartmentsController } from "./departments/departments.controller.ts";
+import { ExportOrdersController } from "./export-orders/export-orders.controller.ts";
+import { ConsumptionController } from "./export-orders/consumption.controller.ts";
+import { QuotesController as ExportQuotesController } from "./export-orders/quotes.controller.ts";
+import { ExportCatalogController } from "./export-orders/catalog.controller.ts";
+import { ExportPurchasesController } from "./export-orders/purchases.controller.ts";
+import { ExportSamplesController } from "./export-orders/samples.controller.ts";
+import { ExportInspectionsController } from "./export-orders/inspections.controller.ts";
+import { ExportProductionController } from "./export-orders/production.controller.ts";
+import { ExportVedController } from "./export-orders/ved.controller.ts";
+import { ExportLogisticsController } from "./export-orders/logistics.controller.ts";
+import { ExportAlertsController, ExportAlertsService } from "./export-orders/alerts.ts";
+import { LocksController } from "./locks/locks.controller.ts";
+import { RealtimeController } from "./realtime/realtime.controller.ts";
 
 @Module({
   controllers: [AuthController, UsersController, SettingsController, FilesController,
     ClientsController, LeadsController, DealsController, TasksController,
-    CatalogController, PricingController, QuotesController, WarehouseController, OrdersController, ProductionController, ShipmentsController, MiniController, FeedbackController, PlatformController, ExportController, ImportController, HealthController, ClientPortalController, ContractorsController],
-  providers: [DbService, AuditService, AuthService, NotificationsService, FeedbackService, WarehouseJobsService, { provide: APP_GUARD, useClass: AuthGuard }],
+    CatalogController, PricingController, QuotesController, WarehouseController, OrdersController, ProductionController, ShipmentsController, MiniController, FeedbackController, PlatformController, ExportController, ImportController, HealthController, ClientPortalController, ContractorsController, DepartmentsController, LocksController, ExportOrdersController, ConsumptionController, ExportQuotesController, ExportCatalogController, ExportPurchasesController, ExportSamplesController, ExportInspectionsController, ExportProductionController, ExportVedController, ExportLogisticsController, ExportAlertsController, RealtimeController],
+  providers: [DbService, AuditService, AuthService, NotificationsService, FeedbackService, WarehouseJobsService, ExportAlertsService, { provide: APP_GUARD, useClass: AuthGuard }],
 })
 export class AppModule {}

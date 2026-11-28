@@ -10,24 +10,29 @@ import { RolesPage } from "./pages/Roles";
 import { ReferencesPage } from "./pages/References";
 import { AuditPage } from "./pages/Audit";
 import { ClientsPage, ClientCard } from "./pages/Clients";
+import { ExportCatalogPage } from "./pages/ExportCatalog";
+import { ExportOrdersPage, ExportOrderCard } from "./pages/ExportOrders";
+import { ExportDashboardPage } from "./pages/ExportDashboard";
+import { ExportVedPage } from "./pages/ExportVed";
+import { ExportGtdPage } from "./pages/ExportGtd";
+import { ExportQuotePrint } from "./pages/ExportQuotePrint";
+import { PatternsPage } from "./pages/Patterns";
+import { ExportInspectionReport } from "./pages/ExportInspectionReport";
 import { LeadsPage } from "./pages/Leads";
 import { DealsPage } from "./pages/Deals";
 import { TasksPage } from "./pages/Tasks";
-import { ModelsPage, ModelPage } from "./pages/Models";
+import { DepartmentsPage } from "./pages/Departments";
+import { useRealtime } from "./realtime";
 import { OrdersPage, OrderNew, OrderView } from "./pages/Orders";
 import { ProductionPage, ProductionView } from "./pages/Production";
 import { FeedbackPage, RatePage } from "./pages/Feedback";
 import { PlatformApp } from "./pages/Platform";
 import { ExportPage } from "./pages/Export";
-import { ImportPage } from "./pages/Import";
-import { BrigadesPage } from "./pages/Brigades";
 import { ShipmentsPage, ShipmentView } from "./pages/Shipments";
-import { StockPage, MovesPage, LotsPage, InventoryPage } from "./pages/Warehouse";
+import { MovesPage, InventoryPage } from "./pages/Warehouse";
 import { MaterialsPage } from "./pages/Materials";
-import { CatalogSettingsPage } from "./pages/CatalogSettings";
 import { PricingPage } from "./pages/Pricing";
 import { QuotesPage, QuoteNew, QuoteView } from "./pages/Quotes";
-import { RatesPage } from "./pages/Rates";
 
 /** Публичная страница оценки открывается без входа; всё остальное — для сотрудников. */
 export function App() {
@@ -60,6 +65,7 @@ function Shell() {
   const { t, lang, setLang, theme, toggleTheme, currency, setCurrency } = useUi();
   const { can, signOut } = useMe();
   const nav = useNavigate();
+  useRealtime();                      // живое обновление: изменения коллег приходят без перезагрузки
   const [q, setQ] = useState("");
   // Пункты меню: каждый следующий модуль добавляет свой. Пока доступны только настройки.
   const items = [
@@ -69,25 +75,23 @@ function Shell() {
     { to: "/clients", label: t("clients"), show: can("clients.view") },
     { to: "/tasks", label: t("tasks"), show: can("tasks.view") },
     { to: "/quotes", label: t("quotes"), show: can("quotes.view") },
-    { to: "/models", label: t("models"), show: can("models.view") },
     { to: "/materials", label: t("materials"), show: can("materials.view") },
     { to: "/orders", label: t("orders"), show: can("orders.view") },
-    { to: "/import", label: t("importData"), show: can("data.import") },
     { to: "/export", label: t("exportData"), show: can("data.export") },
     { to: "/feedback", label: t("feedback"), show: can("feedback.view") },
-    { to: "/brigades", label: t("brigades"), show: can("production.view") },
+    { to: "/export-dashboard", label: t("exportDashboard"), show: can("exportorders.view") },
+    { to: "/export-orders", label: t("exportOrders"), show: can("exportorders.view") },
+    { to: "/patterns", label: t("patterns"), show: can("patterns.view") },
+    { to: "/export-catalog", label: t("exportFabrics"), show: can("patterns.view") },
     { to: "/shipments", label: t("shipments"), show: can("shipments.view") },
     { to: "/production", label: t("productionOrders"), show: can("production.view") },
-    { to: "/stock", label: t("stockBalances"), show: can("warehouse.view") },
     { to: "/movements", label: t("stockMoves"), show: can("warehouse.view") },
-    { to: "/lots", label: t("fabricLots"), show: can("warehouse.view") },
     { to: "/inventory", label: t("inventory"), show: can("warehouse.view") },
     { to: "/pricing", label: t("pricing"), show: can("pricing.view") },
-    { to: "/catalog-settings", label: t("catalogSettings"), show: can("models.edit") },
+    { to: "/departments", label: t("departments"), show: can("departments.view") },
     { to: "/users", label: t("users"), show: can("users.view") },
     { to: "/roles", label: t("roles"), show: can("roles.view") },
     { to: "/references", label: t("references"), show: can("settings.view") },
-    { to: "/rates", label: t("rates"), show: can("settings.view") },
     { to: "/audit", label: t("audit"), show: can("audit.view") },
   ].filter((i) => i.show);
 
@@ -118,33 +122,35 @@ function Shell() {
             <Route path="/clients" element={can("clients.view") ? <ClientsPage /> : <Denied />} />
             <Route path="/clients/:id" element={can("clients.view") ? <ClientCard /> : <Denied />} />
             <Route path="/tasks" element={can("tasks.view") ? <TasksPage /> : <Denied />} />
+            <Route path="/export-dashboard" element={can("exportorders.view") ? <ExportDashboardPage /> : <Denied />} />
+            <Route path="/export-orders" element={can("exportorders.view") ? <ExportOrdersPage /> : <Denied />} />
+            <Route path="/export-orders/:id/inspections/:iid/report" element={can("exportinspections.view") ? <ExportInspectionReport /> : <Denied />} />
+            <Route path="/export-orders/:id/quotes/:qid/print" element={can("exportquotes.view") ? <ExportQuotePrint /> : <Denied />} />
+            <Route path="/export-orders/:id/shipments/:sid/gtd" element={can("exportved.view") ? <ExportGtdPage /> : <Denied />} />
+            <Route path="/export-orders/:id/shipments/:sid/docs" element={can("exportved.view") ? <ExportVedPage /> : <Denied />} />
+            <Route path="/export-orders/:id" element={can("exportorders.view") ? <ExportOrderCard /> : <Denied />} />
+            <Route path="/patterns" element={can("patterns.view") ? <PatternsPage /> : <Denied />} />
+            <Route path="/export-catalog" element={can("patterns.view") ? <ExportCatalogPage /> : <Denied />} />
+            <Route path="/departments" element={can("departments.view") ? <DepartmentsPage /> : <Denied />} />
             <Route path="/quotes" element={can("quotes.view") ? <QuotesPage /> : <Denied />} />
             <Route path="/quotes/new" element={can("quotes.create") ? <QuoteNew /> : <Denied />} />
             <Route path="/quotes/:id" element={can("quotes.view") ? <QuoteView /> : <Denied />} />
-            <Route path="/models" element={can("models.view") ? <ModelsPage /> : <Denied />} />
-            <Route path="/models/:id" element={can("models.view") ? <ModelPage /> : <Denied />} />
             <Route path="/materials" element={can("materials.view") ? <MaterialsPage /> : <Denied />} />
             <Route path="/orders" element={can("orders.view") ? <OrdersPage /> : <Denied />} />
             <Route path="/orders/new" element={can("orders.create") ? <OrderNew /> : <Denied />} />
             <Route path="/orders/:id" element={can("orders.view") ? <OrderView /> : <Denied />} />
-            <Route path="/import" element={can("data.import") ? <ImportPage /> : <Denied />} />
             <Route path="/export" element={can("data.export") ? <ExportPage /> : <Denied />} />
             <Route path="/feedback" element={can("feedback.view") ? <FeedbackPage /> : <Denied />} />
-            <Route path="/brigades" element={can("production.view") ? <BrigadesPage /> : <Denied />} />
             <Route path="/shipments" element={can("shipments.view") ? <ShipmentsPage /> : <Denied />} />
             <Route path="/shipments/:id" element={can("shipments.view") ? <ShipmentView /> : <Denied />} />
             <Route path="/production" element={can("production.view") ? <ProductionPage /> : <Denied />} />
             <Route path="/production/:id" element={can("production.view") ? <ProductionView /> : <Denied />} />
-            <Route path="/stock" element={can("warehouse.view") ? <StockPage /> : <Denied />} />
             <Route path="/movements" element={can("warehouse.view") ? <MovesPage /> : <Denied />} />
-            <Route path="/lots" element={can("warehouse.view") ? <LotsPage /> : <Denied />} />
             <Route path="/inventory" element={can("warehouse.view") ? <InventoryPage /> : <Denied />} />
             <Route path="/pricing" element={can("pricing.view") ? <PricingPage /> : <Denied />} />
-            <Route path="/catalog-settings" element={can("models.edit") ? <CatalogSettingsPage /> : <Denied />} />
             <Route path="/users" element={can("users.view") ? <UsersPage /> : <Denied />} />
             <Route path="/roles" element={can("roles.view") ? <RolesPage /> : <Denied />} />
             <Route path="/references" element={can("settings.view") ? <ReferencesPage /> : <Denied />} />
-            <Route path="/rates" element={can("settings.view") ? <RatesPage /> : <Denied />} />
             <Route path="/audit" element={can("audit.view") ? <AuditPage /> : <Denied />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

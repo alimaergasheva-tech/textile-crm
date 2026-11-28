@@ -1,18 +1,19 @@
-import { BadRequestException, Body, Controller, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, NotFoundException, Param, ParseUUIDPipe, Patch, Post, Req } from "@nestjs/common";
 import { z } from "zod";
 import { DbService } from "../db/db.service.ts";
 import { AuditService } from "../audit/audit.service.ts";
 import { RequirePermission } from "../rbac/rbac.ts";
 import { R, ownerClause, addInteraction } from "./common.ts";
+import { publish } from "../realtime/realtime.ts";
 
 const Deal = z.object({
   title: z.string().min(1), clientId: z.string().uuid(), stageId: z.string().uuid().optional(),
   amount: z.number().int().min(0).default(0), currency: z.enum(["UZS", "USD"]).default("UZS"),
   expectedClose: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), ownerId: z.string().uuid().optional(),
 });
-const DealPatch = z.object({ title: z.string().min(1).optional(), amount: z.number().int().min(0).optional(),
+const DealPatch = z.object({ version: z.number().int().min(1).optional(), title: z.string().min(1).optional(), amount: z.number().int().min(0).optional(),
   currency: z.enum(["UZS", "USD"]).optional(), expectedClose: z.string().optional(), ownerId: z.string().uuid().optional() });
-const StageMove = z.object({ stageId: z.string().uuid(), lostReasonCode: z.string().optional() });
+const StageMove = z.object({ version: z.number().int().min(1).optional(), stageId: z.string().uuid(), lostReasonCode: z.string().optional() });
 
 @Controller()
 export class DealsController {
@@ -40,7 +41,7 @@ export class DealsController {
       const stages = (await c.query("SELECT id,name,sort,kind FROM pipeline_stages WHERE is_active ORDER BY sort")).rows;
       const deals = (await c.query(
         `SELECT d.id,d.title,d.stage_id,d.amount::float8 AS amount,d.currency,d.owner_id,d.expected_close::text,
-                d.last_activity_at,cl.id AS client_id,cl.name AS client_name,u.full_name AS owner_name
+                d.last_activity_at,d.version,cl.id AS client_id,cl.name AS client_name,u.full_name AS owner_name
            FROM deals d JOIN clients cl ON cl.id=d.client_id LEFT JOIN users u ON u.id=d.owner_id
           WHERE d.deleted_at IS NULL${own.sql} ORDER BY d.last_activity_at DESC LIMIT 1000`, own.params)).rows;
       return { stages, deals };
@@ -64,6 +65,7 @@ export class DealsController {
       await addInteraction(c, req.user.tenantId, "client", d.clientId, "system", `Создана сделка «${d.title}»`, req.user.id);
       await this.audit.log(c, { tenantId: req.user.tenantId, userId: req.user.id, entity: "deal", entityId: id,
         action: "create", after: d, ip: req.ip });
+      await publish(c, req.user.tenantId, { channel: "deals", kind: "created", entity: "deal", entityId: id, actorId: req.user.id });
       return { id };
     });
   }
@@ -74,16 +76,19 @@ export class DealsController {
     return this.db.tx(req.user.tenantId, async (c) => {
       const own = ownerClause(req.user, "deals.edit", "owner_id", 2);
       const before = (await c.query(
-        `SELECT title,amount::float8 AS amount,currency,expected_close::text,owner_id FROM deals WHERE id=$1 AND deleted_at IS NULL${own.sql}`,
+        `SELECT title,amount::float8 AS amount,currency,expected_close::text,owner_id,version FROM deals WHERE id=$1 AND deleted_at IS NULL${own.sql} FOR UPDATE`,
         [id, ...own.params])).rows[0];
       if (!before) throw new NotFoundException();
+      if (d.version !== undefined && d.version !== before.version)
+        throw new ConflictException({ message: "Сделка уже изменена другим пользователем. Обновите данные и повторите.", currentVersion: before.version });
       await c.query(
-        `UPDATE deals SET title=COALESCE($2,title),amount=COALESCE($3,amount),currency=COALESCE($4,currency),
+        `UPDATE deals SET version=version+1, title=COALESCE($2,title),amount=COALESCE($3,amount),currency=COALESCE($4,currency),
                 expected_close=COALESCE($5::date,expected_close),owner_id=COALESCE($6,owner_id),last_activity_at=now() WHERE id=$1`,
         [id, d.title ?? null, d.amount ?? null, d.currency ?? null, d.expectedClose ?? null, d.ownerId ?? null]);
       await this.audit.log(c, { tenantId: req.user.tenantId, userId: req.user.id, entity: "deal", entityId: id,
         action: "update", before, after: d, ip: req.ip });
-      return { updated: true };
+      await publish(c, req.user.tenantId, { channel: "deals", kind: "updated", entity: "deal", entityId: id, actorId: req.user.id });
+      return { updated: true, version: before.version + 1 };
     });
   }
 
@@ -94,9 +99,11 @@ export class DealsController {
     return this.db.tx(req.user.tenantId, async (c) => {
       const own = ownerClause(req.user, "deals.edit", "owner_id", 2);
       const deal = (await c.query(
-        `SELECT d.stage_id,d.client_id,s.name AS from_name FROM deals d JOIN pipeline_stages s ON s.id=d.stage_id
+        `SELECT d.stage_id,d.client_id,d.version,s.name AS from_name FROM deals d JOIN pipeline_stages s ON s.id=d.stage_id
           WHERE d.id=$1 AND d.deleted_at IS NULL${own.sql.replace("owner_id", "d.owner_id")} FOR UPDATE OF d`, [id, ...own.params])).rows[0];
       if (!deal) throw new NotFoundException();
+      if (d.version !== undefined && d.version !== deal.version)
+        throw new ConflictException({ message: "Сделка уже изменена другим пользователем. Обновите данные и повторите.", currentVersion: deal.version });
       const to = (await c.query("SELECT id,name,kind FROM pipeline_stages WHERE id=$1 AND is_active", [d.stageId])).rows[0];
       if (!to) throw new BadRequestException("Этап не найден");
       if (to.kind === "lost") {
@@ -105,14 +112,15 @@ export class DealsController {
           throw new BadRequestException("Неизвестная причина проигрыша");
       }
       await c.query(
-        `UPDATE deals SET stage_id=$2, lost_reason_code=$3, closed_at=CASE WHEN $4 IN ('won','lost') THEN now() ELSE NULL END,
+        `UPDATE deals SET version=version+1, stage_id=$2, lost_reason_code=$3, closed_at=CASE WHEN $4 IN ('won','lost') THEN now() ELSE NULL END,
                 last_activity_at=now() WHERE id=$1`,
         [id, to.id, to.kind === "lost" ? d.lostReasonCode : null, to.kind]);
       await addInteraction(c, req.user.tenantId, "client", deal.client_id, "stage_change",
         `${deal.from_name} → ${to.name}${to.kind === "lost" ? ` (${d.lostReasonCode})` : ""}`, req.user.id);
       await this.audit.log(c, { tenantId: req.user.tenantId, userId: req.user.id, entity: "deal", entityId: id,
         action: "move_stage", before: { stageId: deal.stage_id }, after: d, ip: req.ip });
-      return { stageId: to.id, kind: to.kind };
+      await publish(c, req.user.tenantId, { channel: "deals", kind: "moved", entity: "deal", entityId: id, actorId: req.user.id, payload: { stageId: to.id } });
+      return { stageId: to.id, kind: to.kind, version: deal.version + 1 };
     });
   }
 }

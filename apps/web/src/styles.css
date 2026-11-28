@@ -17,6 +17,10 @@ html.bg-fallback body {
   animation: spin 40s linear infinite;
 }
 html.bg-fallback .bg { display:none; }
+/* Фото-фон (public/bg.jpg): растягивается на весь экран, поверх лёгкое затемнение под тему для читаемости */
+.bg-photo { background:url(/bg.jpg) center / cover no-repeat; }
+.bg-photo::after { content:""; position:absolute; inset:0; background:color-mix(in oklab, var(--bg) 35%, transparent); }
+[data-theme="dark"] .bg-photo::after { background:color-mix(in oklab, var(--bg) 60%, transparent); }
 @keyframes spin { to { --a:360deg; } }
 @media (prefers-reduced-motion: reduce) { html.bg-fallback body { animation:none; } }
 
