@@ -10,6 +10,8 @@ interface Insp { id: string; model_id: string; model: string; round: number; sta
   defects: (Defect & { id: string })[]; photos: { id: string; caption: string | null }[]; verdict: { critical: number; major: number; minor: number; result: "pass" | "fail"; reasons: string[] } }
 interface Report extends Omit<Insp, "photos"> { photos: { id: string; caption: string | null; src: string }[] }
 interface Model { id: string; code: string; qty: number }
+/** Правки формы: дефекты без id (id присваивает сервер). */
+type Form = Omit<Partial<Insp>, "defects"> & { defects?: Defect[] };
 
 /** Сжатие снимка перед отправкой: длинная сторона до 1280 px, JPEG 0,8 — отчёт остаётся лёгким. */
 async function compress(file: File): Promise<string> {
@@ -31,7 +33,7 @@ export function ExportInspections({ orderId, models }: { orderId: string; models
   const manage = can("exportinspections.manage");
   const q = useQuery({ queryKey: ["export-inspections", orderId], queryFn: () => api<Insp[]>(`/export-orders/${orderId}/inspections`) });
   const [open, setOpen] = useState<string | null>(null);
-  const [form, setForm] = useState<Record<string, Partial<Insp> & { defects?: Defect[] }>>({});
+  const [form, setForm] = useState<Record<string, Form>>({});
   const [err, setErr] = useState("");
   const refresh = () => { qc.invalidateQueries({ queryKey: ["export-inspections", orderId] }); qc.invalidateQueries({ queryKey: ["export-inspection-report"] }); };
   const fail = (e: unknown) => setErr((e as Error)?.message || t("error"));
@@ -84,7 +86,7 @@ export function ExportInspections({ orderId, models }: { orderId: string; models
 }
 
 function Editor({ i, f, setF, manage, dirty, onSave, onFinalize, onPhotos, onDelPhoto, busy, t }: {
-  i: Insp; f: Partial<Insp> & { defects?: Defect[] }; setF: (p: Partial<Insp> & { defects?: Defect[] }) => void; manage: boolean; dirty: boolean;
+  i: Insp; f: Form; setF: (p: Form) => void; manage: boolean; dirty: boolean;
   onSave: () => void; onFinalize: () => void; onPhotos: (f: File[]) => void; onDelPhoto: (id: string) => void; busy: boolean; t: (k: any) => string;
 }) {
   const draft = i.status === "draft" && manage;
